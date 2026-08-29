@@ -16,5 +16,10 @@ public class Transacao
     [Required] public decimal vlTransacao { get; set; }
     [Required] public DateTime dtTransacao { get; set; }
     [MaxLength(500)] public string? dsTransacao { get; set; }
+    // Parcelamento
+    public bool parcelado { get; set; } = false;
+    public int? nrParcelas { get; set; }
+    public int? nrParcelaAtual { get; set; }
+    public int? cdTransacaoPai { get; set; }
     public DateTime dtCriacao { get; set; } = DateTime.UtcNow;
 }

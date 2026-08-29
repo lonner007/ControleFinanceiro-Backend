@@ -17,26 +17,57 @@ public class TransacaoRepositorio
                 t.cdConta, nmConta = t.Conta != null ? t.Conta.nmConta : null,
                 t.cdContaDestino, nmContaDestino = t.ContaDestino != null ? t.ContaDestino.nmConta : null,
                 t.cdCategoria, nmCategoria = t.Categoria != null ? t.Categoria.nmCategoria : null,
-                t.vlTransacao, t.dtTransacao, t.dsTransacao, t.dtCriacao
+                t.vlTransacao, t.dtTransacao, t.dsTransacao,
+                t.parcelado, t.nrParcelas, t.nrParcelaAtual, t.cdTransacaoPai,
+                t.dtCriacao
             }).ToListAsync();
 
-    public async Task<RespostaHttp<Transacao>> CriarTransacao(Transacao transacao, int cdUsuario)
+    public async Task<RespostaHttp<List<Transacao>>> CriarTransacao(Transacao transacao, int cdUsuario)
     {
         using var db = await _context.Database.BeginTransactionAsync();
         try
         {
-            // Valida que a conta pertence ao usuário do token
             var conta = await _context.Contas.FirstOrDefaultAsync(c => c.cdConta == transacao.cdConta && c.cdUsuario == cdUsuario);
-            if (conta == null) return Erro("Conta de origem não encontrada.");
+            if (conta == null) return ErroLista("Conta de origem não encontrada.");
+            transacao.cdUsuario = cdUsuario;
 
-            transacao.cdUsuario = cdUsuario; // NUNCA aceita do front
+            // Parcelamento
+            if (transacao.parcelado && transacao.nrParcelas is > 1)
+            {
+                var vlParcela = Math.Round(transacao.vlTransacao / transacao.nrParcelas.Value, 2);
+                var parcelas = new List<Transacao>();
+                for (int i = 0; i < transacao.nrParcelas.Value; i++)
+                {
+                    var vl = i == transacao.nrParcelas.Value - 1
+                        ? transacao.vlTransacao - vlParcela * (transacao.nrParcelas.Value - 1)
+                        : vlParcela;
+                    parcelas.Add(new Transacao
+                    {
+                        cdUsuario = cdUsuario, tpTransacao = transacao.tpTransacao,
+                        cdConta = transacao.cdConta, cdCategoria = transacao.cdCategoria,
+                        vlTransacao = vl, dtTransacao = transacao.dtTransacao.AddMonths(i),
+                        dsTransacao = $"{transacao.dsTransacao} ({i + 1}/{transacao.nrParcelas.Value})",
+                        parcelado = true, nrParcelas = transacao.nrParcelas,
+                        nrParcelaAtual = i + 1, dtCriacao = DateTime.UtcNow
+                    });
+                    if (i == 0) { if (transacao.tpTransacao == "Despesa") conta.vlSaldoAtual -= vl; else conta.vlSaldoAtual += vl; }
+                }
+                _context.Transacoes.AddRange(parcelas);
+                await _context.SaveChangesAsync();
+                var pai = parcelas[0];
+                foreach (var p in parcelas.Skip(1)) p.cdTransacaoPai = pai.cdTransacao;
+                await _context.SaveChangesAsync();
+                await db.CommitAsync();
+                return new RespostaHttp<List<Transacao>> { StatusCode = 200, Dados = parcelas, Mensagem = new List<Mensagem> { new() { titulo = "Sucesso", descricao = $"{transacao.nrParcelas} parcelas criadas!", severity = TipoMensagem.Success } } };
+            }
 
+            // Transação simples
             if (transacao.tpTransacao == "Transferencia")
             {
-                if (transacao.cdContaDestino == null) return Erro("Conta destino é obrigatória.");
-                if (transacao.cdContaDestino == transacao.cdConta) return Erro("Conta origem e destino iguais.");
+                if (transacao.cdContaDestino == null) return ErroLista("Conta destino é obrigatória.");
+                if (transacao.cdContaDestino == transacao.cdConta) return ErroLista("Conta origem e destino iguais.");
                 var dest = await _context.Contas.FirstOrDefaultAsync(c => c.cdConta == transacao.cdContaDestino && c.cdUsuario == cdUsuario);
-                if (dest == null) return Erro("Conta destino não encontrada.");
+                if (dest == null) return ErroLista("Conta destino não encontrada.");
                 conta.vlSaldoAtual -= transacao.vlTransacao;
                 dest.vlSaldoAtual += transacao.vlTransacao;
             }
@@ -47,9 +78,9 @@ public class TransacaoRepositorio
             _context.Transacoes.Add(transacao);
             await _context.SaveChangesAsync();
             await db.CommitAsync();
-            return new RespostaHttp<Transacao> { StatusCode = 200, Dados = transacao, Mensagem = new List<Mensagem> { new() { titulo = "Sucesso", descricao = "Transação registrada!", severity = TipoMensagem.Success } } };
+            return new RespostaHttp<List<Transacao>> { StatusCode = 200, Dados = new List<Transacao> { transacao }, Mensagem = new List<Mensagem> { new() { titulo = "Sucesso", descricao = "Transação registrada!", severity = TipoMensagem.Success } } };
         }
-        catch (Exception ex) { await db.RollbackAsync(); return Erro(ex.Message); }
+        catch (Exception ex) { await db.RollbackAsync(); return ErroLista(ex.Message); }
     }
 
     public async Task<RespostaHttp<Transacao>> AtualizarTransacao(int cdTransacao, Transacao nova, int cdUsuario)
@@ -60,14 +91,11 @@ public class TransacaoRepositorio
             var t = await _context.Transacoes.Include(x => x.Conta).Include(x => x.ContaDestino)
                 .FirstOrDefaultAsync(x => x.cdTransacao == cdTransacao && x.cdUsuario == cdUsuario);
             if (t == null) return new RespostaHttp<Transacao> { StatusCode = 404, Mensagem = new List<Mensagem> { new() { titulo = "Não encontrado", descricao = "Transação não encontrada", severity = TipoMensagem.Error } } };
-
             await ReverterSaldo(t, cdUsuario);
             var novaConta = await _context.Contas.FirstOrDefaultAsync(c => c.cdConta == nova.cdConta && c.cdUsuario == cdUsuario);
             if (novaConta == null) return Erro("Conta não encontrada.");
-
             t.tpTransacao = nova.tpTransacao; t.cdConta = nova.cdConta; t.cdContaDestino = nova.cdContaDestino;
             t.cdCategoria = nova.cdCategoria; t.vlTransacao = nova.vlTransacao; t.dtTransacao = nova.dtTransacao; t.dsTransacao = nova.dsTransacao;
-
             if (nova.tpTransacao == "Transferencia")
             {
                 var dest = await _context.Contas.FirstOrDefaultAsync(c => c.cdConta == nova.cdContaDestino && c.cdUsuario == cdUsuario);
@@ -76,7 +104,6 @@ public class TransacaoRepositorio
             }
             else if (nova.tpTransacao == "Receita") novaConta.vlSaldoAtual += nova.vlTransacao;
             else if (nova.tpTransacao == "Despesa") novaConta.vlSaldoAtual -= nova.vlTransacao;
-
             await _context.SaveChangesAsync(); await db.CommitAsync();
             return new RespostaHttp<Transacao> { StatusCode = 200, Dados = t, Mensagem = new List<Mensagem> { new() { titulo = "Sucesso", descricao = "Transação atualizada!", severity = TipoMensagem.Success } } };
         }
@@ -117,4 +144,5 @@ public class TransacaoRepositorio
     }
 
     private RespostaHttp<Transacao> Erro(string msg) => new() { StatusCode = 500, Mensagem = new List<Mensagem> { new() { titulo = "Erro", descricao = msg, severity = TipoMensagem.Error } } };
+    private RespostaHttp<List<Transacao>> ErroLista(string msg) => new() { StatusCode = 500, Mensagem = new List<Mensagem> { new() { titulo = "Erro", descricao = msg, severity = TipoMensagem.Error } } };
 }

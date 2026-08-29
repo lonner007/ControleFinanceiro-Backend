@@ -6,7 +6,7 @@ public class Conta
     [Key] public int cdConta { get; set; }
     [Required] public int cdUsuario { get; set; }
     [ForeignKey("cdUsuario")] public Usuario? Usuario { get; set; }
-    public string nmConta { get; set; } = string.Empty;
+    [Required][MaxLength(120)] public string nmConta { get; set; } = string.Empty;
     public int cdTipoConta { get; set; }
     public decimal vlSaldoInicial { get; set; }
     public decimal vlSaldoAtual { get; set; }

@@ -1,4 +1,4 @@
-######################################
+﻿######################################
 # Build
 ######################################
 bin/
@@ -43,9 +43,11 @@ packages/
 Migrations/*Snapshot.cs
 
 ######################################
-# App settings (cuidado com dados sens�veis)
+# App settings (cuidado com dados sensíveis)
 ######################################
 appsettings.Development.json
+appsettings.Local.json
+appsettings.Local.*.json
 
 ######################################
 # Swagger (se gerar arquivos locais)

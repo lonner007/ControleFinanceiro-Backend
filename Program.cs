@@ -7,14 +7,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 builder.Services.AddControllers();
-
-// Banco de dados
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// JWT
 var jwtChave = builder.Configuration["Jwt:Chave"]!;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -23,40 +20,28 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtChave)),
-            ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Emissor"],
-            ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audiencia"],
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero,
+            ValidateIssuer = true, ValidIssuer = builder.Configuration["Jwt:Emissor"],
+            ValidateAudience = true, ValidAudience = builder.Configuration["Jwt:Audiencia"],
+            ValidateLifetime = true, ClockSkew = TimeSpan.Zero,
         };
     });
-
 builder.Services.AddAuthorization();
-
-// Swagger com botão de autenticação JWT
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-// Repositórios e Serviços
 builder.Services.AddScoped<JwtServico>();
 builder.Services.AddScoped<AuthRepositorio>();
 builder.Services.AddScoped<ContaRepositorio>();
 builder.Services.AddScoped<CategoriaRepositorio>();
 builder.Services.AddScoped<MetaRepositorio>();
 builder.Services.AddScoped<TransacaoRepositorio>();
-
-// CORS — só permite o frontend
+builder.Services.AddScoped<OrcamentoRepositorio>();
 builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", p =>
-        p.WithOrigins("http://localhost:4200")
-         .AllowAnyMethod()
-         .AllowAnyHeader()));
+        p.WithOrigins("http://localhost:4200").AllowAnyMethod().AllowAnyHeader()));
 
 var app = builder.Build();
-
 app.UseCors("AllowFrontend");
-app.UseAuthentication(); // Deve vir ANTES de UseAuthorization
+app.UseAuthentication();
 app.UseAuthorization();
 app.UseSwagger();
 app.UseSwaggerUI();

@@ -54,7 +54,7 @@ public class AuthRepositorio
         var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.dsEmail == dto.dsEmail.ToLower().Trim() && u.ativo);
         if (usuario == null || !BCrypt.Net.BCrypt.Verify(dto.dsSenha, usuario.dsSenhaHash))
             return Erro("E-mail ou senha incorretos.");
-
+ 
         var refreshToken = _jwt.GerarRefreshToken();
         usuario.dsRefreshToken = refreshToken;
         usuario.dtRefreshTokenExpira = DateTime.UtcNow.AddDays(7);

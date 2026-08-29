@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
     public DbSet<Categoria> Categorias { get; set; }
     public DbSet<Meta> Metas { get; set; }
     public DbSet<Transacao> Transacoes { get; set; }
+    public DbSet<Orcamento> Orcamentos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -17,5 +18,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Transacao>().HasOne(t => t.Conta).WithMany().HasForeignKey(t => t.cdConta).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Transacao>().HasOne(t => t.ContaDestino).WithMany().HasForeignKey(t => t.cdContaDestino).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
         modelBuilder.Entity<Transacao>().HasOne(t => t.Categoria).WithMany().HasForeignKey(t => t.cdCategoria).OnDelete(DeleteBehavior.SetNull).IsRequired(false);
+        modelBuilder.Entity<Orcamento>().HasOne(o => o.Categoria).WithMany().HasForeignKey(o => o.cdCategoria).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<Orcamento>().HasIndex(o => new { o.cdUsuario, o.cdCategoria, o.nrMes, o.nrAno }).IsUnique();
     }
 }

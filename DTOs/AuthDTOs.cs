@@ -1,5 +1,29 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace ControleFinanceiro_Backend.DTOs;
-public record RegistroDto(string nmUsuario, string dsEmail, string dsSenha);
-public record LoginDto(string dsEmail, string dsSenha);
-public record RefreshDto(string refreshToken);
+
+public class RegistroDto
+{
+    [Required]
+    public string nmUsuario { get; set; } = string.Empty;
+
+    [Required]
+    [EmailAddress]
+    public string dsEmail { get; set; } = string.Empty;
+
+    [Required]
+    [MinLength(6)]
+    public string dsSenha { get; set; } = string.Empty;
+}
+
+public class LoginDto
+{
+    [Required, EmailAddress, StringLength(200)]
+    public string dsEmail  { get; set; } = string.Empty;
+    
+    [ Required, MinLength(6), StringLength(128)]
+    public string dsSenha  { get; set; } = string.Empty;
+}
+
+public record RefreshDto([property: Required, StringLength(512)] string refreshToken);
 public record AuthResponseDto(string accessToken, string refreshToken, int cdUsuario, string nmUsuario, string dsEmail);
