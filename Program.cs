@@ -37,9 +37,22 @@ builder.Services.AddScoped<TransacaoRepositorio>();
 builder.Services.AddScoped<OrcamentoRepositorio>();
 builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", p =>
-        p.WithOrigins("http://localhost:4200").AllowAnyMethod().AllowAnyHeader()));
+        p.WithOrigins(
+                "http://localhost:4200",
+                "http://localhost:8080",
+                "http://localhost")
+         .AllowAnyMethod()
+         .AllowAnyHeader()
+         .AllowCredentials()));
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
+
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
