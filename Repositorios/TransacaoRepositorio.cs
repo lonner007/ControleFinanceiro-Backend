@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 namespace ControleFinanceiro_Backend.Repositorios;
 public class TransacaoRepositorio
 {
+    private static readonly HashSet<string> TiposPermitidos = new(StringComparer.Ordinal)
+    { "Receita", "Despesa", "Transferencia" };
     private readonly AppDbContext _context;
     public TransacaoRepositorio(AppDbContext context) { _context = context; }
 
@@ -20,7 +22,7 @@ public class TransacaoRepositorio
                 t.vlTransacao, t.dtTransacao, t.dsTransacao,
                 t.parcelado, t.nrParcelas, t.nrParcelaAtual, t.cdTransacaoPai,
                 t.dtCriacao
-            }).ToListAsync();
+            }).Take(1000).ToListAsync();
 
     public async Task<RespostaHttp<List<Transacao>>> CriarTransacao(Transacao transacao, int cdUsuario)
     {
@@ -29,6 +31,9 @@ public class TransacaoRepositorio
         {
             var conta = await _context.Contas.FirstOrDefaultAsync(c => c.cdConta == transacao.cdConta && c.cdUsuario == cdUsuario);
             if (conta == null) return ErroLista("Conta de origem não encontrada.");
+            if (!TiposPermitidos.Contains(transacao.tpTransacao)) return ErroLista("Tipo de transação inválido.");
+            if (transacao.cdCategoria.HasValue && !await _context.Categorias.AnyAsync(c => c.cdCategoria == transacao.cdCategoria && c.cdUsuario == cdUsuario))
+                return ErroLista("Categoria não encontrada.");
             transacao.cdUsuario = cdUsuario;
 
             // Parcelamento
@@ -80,7 +85,7 @@ public class TransacaoRepositorio
             await db.CommitAsync();
             return new RespostaHttp<List<Transacao>> { StatusCode = 200, Dados = new List<Transacao> { transacao }, Mensagem = new List<Mensagem> { new() { titulo = "Sucesso", descricao = "Transação registrada!", severity = TipoMensagem.Success } } };
         }
-        catch (Exception ex) { await db.RollbackAsync(); return ErroLista(ex.Message); }
+        catch { await db.RollbackAsync(); return ErroLista("Não foi possível concluir a operação."); }
     }
 
     public async Task<RespostaHttp<Transacao>> AtualizarTransacao(int cdTransacao, Transacao nova, int cdUsuario)
@@ -91,6 +96,9 @@ public class TransacaoRepositorio
             var t = await _context.Transacoes.Include(x => x.Conta).Include(x => x.ContaDestino)
                 .FirstOrDefaultAsync(x => x.cdTransacao == cdTransacao && x.cdUsuario == cdUsuario);
             if (t == null) return new RespostaHttp<Transacao> { StatusCode = 404, Mensagem = new List<Mensagem> { new() { titulo = "Não encontrado", descricao = "Transação não encontrada", severity = TipoMensagem.Error } } };
+            if (!TiposPermitidos.Contains(nova.tpTransacao)) return Erro("Tipo de transação inválido.");
+            if (nova.cdCategoria.HasValue && !await _context.Categorias.AnyAsync(c => c.cdCategoria == nova.cdCategoria && c.cdUsuario == cdUsuario))
+                return Erro("Categoria não encontrada.");
             await ReverterSaldo(t, cdUsuario);
             var novaConta = await _context.Contas.FirstOrDefaultAsync(c => c.cdConta == nova.cdConta && c.cdUsuario == cdUsuario);
             if (novaConta == null) return Erro("Conta não encontrada.");
@@ -98,6 +106,7 @@ public class TransacaoRepositorio
             t.cdCategoria = nova.cdCategoria; t.vlTransacao = nova.vlTransacao; t.dtTransacao = nova.dtTransacao; t.dsTransacao = nova.dsTransacao;
             if (nova.tpTransacao == "Transferencia")
             {
+                if (nova.cdContaDestino == nova.cdConta) return Erro("Conta origem e destino iguais.");
                 var dest = await _context.Contas.FirstOrDefaultAsync(c => c.cdConta == nova.cdContaDestino && c.cdUsuario == cdUsuario);
                 if (dest == null) return Erro("Conta destino não encontrada.");
                 novaConta.vlSaldoAtual -= nova.vlTransacao; dest.vlSaldoAtual += nova.vlTransacao;
@@ -107,7 +116,7 @@ public class TransacaoRepositorio
             await _context.SaveChangesAsync(); await db.CommitAsync();
             return new RespostaHttp<Transacao> { StatusCode = 200, Dados = t, Mensagem = new List<Mensagem> { new() { titulo = "Sucesso", descricao = "Transação atualizada!", severity = TipoMensagem.Success } } };
         }
-        catch (Exception ex) { await db.RollbackAsync(); return Erro(ex.Message); }
+        catch { await db.RollbackAsync(); return Erro("Não foi possível concluir a operação."); }
     }
 
     public async Task<RespostaHttp<Transacao>> DeletarTransacao(int cdTransacao, int cdUsuario)
@@ -123,7 +132,7 @@ public class TransacaoRepositorio
             await _context.SaveChangesAsync(); await db.CommitAsync();
             return new RespostaHttp<Transacao> { StatusCode = 200, Mensagem = new List<Mensagem> { new() { titulo = "Sucesso", descricao = "Transação deletada!", severity = TipoMensagem.Success } } };
         }
-        catch (Exception ex) { await db.RollbackAsync(); return Erro(ex.Message); }
+        catch { await db.RollbackAsync(); return Erro("Não foi possível concluir a operação."); }
     }
 
     private async Task ReverterSaldo(Transacao t, int cdUsuario)

@@ -8,7 +8,7 @@ public class Categoria
     [ForeignKey("cdUsuario")] public Usuario? Usuario { get; set; }
     [Required][MaxLength(100)] public string nmCategoria { get; set; } = string.Empty;
     [MaxLength(500)] public string? dsCategoria { get; set; }
-    [Required][MaxLength(20)] public string tpCategoria { get; set; } = string.Empty;
+    [Required][StringLength(20, MinimumLength = 1)] public string tpCategoria { get; set; } = string.Empty;
     [MaxLength(50)] public string? icone { get; set; }
     [MaxLength(20)] public string? cor { get; set; }
     public bool ativo { get; set; } = true;

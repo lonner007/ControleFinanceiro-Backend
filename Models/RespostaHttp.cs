@@ -5,14 +5,14 @@ namespace ControleFinanceiro_Backend.Models
     public class RespostaHttp<T>
     {
         public int StatusCode { get; set; }
-        public List<Mensagem> Mensagem { get; set; }
+        public List<Mensagem> Mensagem { get; set; } = new();
         public T? Dados { get; set; }
     }
 
     public class Mensagem
     {
-        public string titulo { get; set; }
-        public string descricao { get; set; }
+        public string titulo { get; set; } = string.Empty;
+        public string descricao { get; set; } = string.Empty;
         public TipoMensagem severity { get; set; }
     }
 

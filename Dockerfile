@@ -13,4 +13,5 @@ ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
 COPY --from=build /app/publish ./
+USER app
 ENTRYPOINT ["dotnet", "ControleFinanceiro-Backend.dll"]

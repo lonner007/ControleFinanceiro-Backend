@@ -7,8 +7,8 @@ public class Conta
     [Required] public int cdUsuario { get; set; }
     [ForeignKey("cdUsuario")] public Usuario? Usuario { get; set; }
     [Required][MaxLength(120)] public string nmConta { get; set; } = string.Empty;
-    public int cdTipoConta { get; set; }
-    public decimal vlSaldoInicial { get; set; }
+    [Range(1, 20)] public int cdTipoConta { get; set; }
+    [Range(typeof(decimal), "-1000000000", "1000000000")] public decimal vlSaldoInicial { get; set; }
     public decimal vlSaldoAtual { get; set; }
     public DateTime dtCriacao { get; set; } = DateTime.UtcNow;
 }

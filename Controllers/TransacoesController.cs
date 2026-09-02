@@ -18,11 +18,11 @@ public class TransacoesController : ControllerBase
     }
 
     [HttpPost("CriarTransacao")]
-    public async Task<IActionResult> Criar([FromBody] Transacao transacao)
+    public async Task<IActionResult> Criar([FromBody, Bind("tpTransacao,cdConta,cdContaDestino,cdCategoria,vlTransacao,dtTransacao,dsTransacao,parcelado,nrParcelas")] Transacao transacao)
     { var res = await _repo.CriarTransacao(transacao, User.GetUserId()); return StatusCode(res.StatusCode, res); }
 
     [HttpPut("{cdTransacao}")]
-    public async Task<IActionResult> Atualizar(int cdTransacao, [FromBody] Transacao transacao)
+    public async Task<IActionResult> Atualizar(int cdTransacao, [FromBody, Bind("tpTransacao,cdConta,cdContaDestino,cdCategoria,vlTransacao,dtTransacao,dsTransacao")] Transacao transacao)
     { var res = await _repo.AtualizarTransacao(cdTransacao, transacao, User.GetUserId()); return StatusCode(res.StatusCode, res); }
 
     [HttpDelete("deletar/{cdTransacao}")]

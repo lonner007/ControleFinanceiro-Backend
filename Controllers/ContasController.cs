@@ -18,11 +18,11 @@ public class ContasController : ControllerBase
     }
 
     [HttpPost("CriarConta")]
-    public async Task<IActionResult> Criar([FromBody] Conta conta)
+    public async Task<IActionResult> Criar([FromBody, Bind("nmConta,cdTipoConta,vlSaldoInicial")] Conta conta)
     { var res = await _repo.CriarConta(conta, User.GetUserId()); return StatusCode(res.StatusCode, res); }
 
     [HttpPut("{cdConta}")]
-    public async Task<IActionResult> Atualizar(int cdConta, [FromBody] Conta conta)
+    public async Task<IActionResult> Atualizar(int cdConta, [FromBody, Bind("nmConta,cdTipoConta,vlSaldoInicial")] Conta conta)
     { var res = await _repo.AtualizarConta(cdConta, conta, User.GetUserId()); return StatusCode(res.StatusCode, res); }
 
     [HttpDelete("deletar/{cdConta}")]

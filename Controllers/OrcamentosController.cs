@@ -3,6 +3,7 @@ using ControleFinanceiro_Backend.Models;
 using ControleFinanceiro_Backend.Repositorios;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 namespace ControleFinanceiro_Backend.Controllers;
 [Authorize][ApiController][Route("Api/Orcamentos")]
 public class OrcamentosController : ControllerBase
@@ -11,14 +12,14 @@ public class OrcamentosController : ControllerBase
     public OrcamentosController(OrcamentoRepositorio repo) { _repo = repo; }
 
     [HttpGet]
-    public async Task<IActionResult> Get([FromQuery] int? mes, [FromQuery] int? ano)
+    public async Task<IActionResult> Get([FromQuery, Range(1, 12)] int? mes, [FromQuery, Range(2000, 2100)] int? ano)
     {
         var lista = await _repo.ObterOrcamentos(User.GetUserId(), mes ?? DateTime.UtcNow.Month, ano ?? DateTime.UtcNow.Year);
         return Ok(new RespostaHttp<List<object>> { StatusCode = 200, Dados = lista });
     }
 
     [HttpPost("Salvar")]
-    public async Task<IActionResult> Salvar([FromBody] Orcamento orc)
+    public async Task<IActionResult> Salvar([FromBody, Bind("cdCategoria,vlLimite,nrMes,nrAno")] Orcamento orc)
     { var res = await _repo.SalvarOrcamento(orc, User.GetUserId()); return StatusCode(res.StatusCode, res); }
 
     [HttpDelete("deletar/{cdOrcamento}")]

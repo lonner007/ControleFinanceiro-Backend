@@ -40,6 +40,12 @@ public class JwtServico
         return Convert.ToBase64String(bytes);
     }
 
+    public string HashRefreshToken(string refreshToken)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken));
+        return Convert.ToBase64String(bytes);
+    }
+
     public ClaimsPrincipal? ObterPrincipalDoTokenExpirado(string token)
     {
         var parametros = new TokenValidationParameters

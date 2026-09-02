@@ -4,7 +4,7 @@ namespace ControleFinanceiro_Backend.DTOs;
 
 public class RegistroDto
 {
-    [Required]
+    [Required, StringLength(120, MinimumLength = 2)]
     public string nmUsuario { get; set; } = string.Empty;
 
     [Required]
@@ -12,7 +12,7 @@ public class RegistroDto
     public string dsEmail { get; set; } = string.Empty;
 
     [Required]
-    [MinLength(6)]
+    [StringLength(128, MinimumLength = 10)]
     public string dsSenha { get; set; } = string.Empty;
 }
 
@@ -21,7 +21,7 @@ public class LoginDto
     [Required, EmailAddress, StringLength(200)]
     public string dsEmail  { get; set; } = string.Empty;
     
-    [ Required, MinLength(6), StringLength(128)]
+    [Required, StringLength(128, MinimumLength = 10)]
     public string dsSenha  { get; set; } = string.Empty;
 }
 

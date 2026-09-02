@@ -12,7 +12,7 @@ public class OrcamentoRepositorio
         var orcamentos = await _context.Orcamentos
             .Include(o => o.Categoria)
             .Where(o => o.cdUsuario == cdUsuario && o.nrMes == mes && o.nrAno == ano)
-            .ToListAsync();
+            .Take(500).ToListAsync();
         var resultados = new List<object>();
         foreach (var orc in orcamentos)
         {
@@ -50,7 +50,7 @@ public class OrcamentoRepositorio
             await _context.SaveChangesAsync();
             return Ok("Orçamento criado!");
         }
-        catch (Exception ex) { return Erro(ex.Message); }
+        catch { return Erro("Não foi possível concluir a operação."); }
     }
 
     public async Task<RespostaHttp<Orcamento>> DeletarOrcamento(int cdOrcamento, int cdUsuario)
@@ -63,7 +63,7 @@ public class OrcamentoRepositorio
             await _context.SaveChangesAsync();
             return Ok("Orçamento excluído!");
         }
-        catch (Exception ex) { return Erro(ex.Message); }
+        catch { return Erro("Não foi possível concluir a operação."); }
     }
 
     public async Task<object> ObterDashboard(int cdUsuario, int mes, int ano)

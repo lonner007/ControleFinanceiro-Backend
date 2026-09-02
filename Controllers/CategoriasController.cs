@@ -18,11 +18,11 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpPost("CriarCategoria")]
-    public async Task<IActionResult> Criar([FromBody] Categoria categoria)
+    public async Task<IActionResult> Criar([FromBody, Bind("nmCategoria,dsCategoria,tpCategoria,icone,cor")] Categoria categoria)
     { var res = await _repo.CriarCategoria(categoria, User.GetUserId()); return StatusCode(res.StatusCode, res); }
 
     [HttpPut("{cdCategoria}")]
-    public async Task<IActionResult> Atualizar(int cdCategoria, [FromBody] Categoria categoria)
+    public async Task<IActionResult> Atualizar(int cdCategoria, [FromBody, Bind("nmCategoria,dsCategoria,tpCategoria,icone,cor")] Categoria categoria)
     { var res = await _repo.AtualizarCategoria(cdCategoria, categoria, User.GetUserId()); return StatusCode(res.StatusCode, res); }
 
     [HttpDelete("deletar/{cdCategoria}")]

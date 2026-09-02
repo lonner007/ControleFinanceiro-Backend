@@ -8,7 +8,7 @@ public class CategoriaRepositorio
     public CategoriaRepositorio(AppDbContext context) { _context = context; }
 
     public async Task<List<Categoria>> ObterListaCategorias(int cdUsuario) =>
-        await _context.Categorias.Where(c => c.cdUsuario == cdUsuario).OrderBy(c => c.nmCategoria).ToListAsync();
+        await _context.Categorias.AsNoTracking().Where(c => c.cdUsuario == cdUsuario).OrderBy(c => c.nmCategoria).Take(500).ToListAsync();
 
     public async Task<RespostaHttp<Categoria>> CriarCategoria(Categoria categoria, int cdUsuario)
     {
@@ -20,7 +20,7 @@ public class CategoriaRepositorio
             await _context.SaveChangesAsync();
             return Ok(categoria, "Categoria criada com sucesso");
         }
-        catch (Exception ex) { return Erro(ex.Message); }
+        catch { return Erro("Não foi possível concluir a operação."); }
     }
 
     public async Task<RespostaHttp<Categoria>> AtualizarCategoria(int cdCategoria, Categoria nova, int cdUsuario)
@@ -34,7 +34,7 @@ public class CategoriaRepositorio
             await _context.SaveChangesAsync();
             return Ok(cat, "Categoria atualizada com sucesso");
         }
-        catch (Exception ex) { return Erro(ex.Message); }
+        catch { return Erro("Não foi possível concluir a operação."); }
     }
 
     public async Task<RespostaHttp<Categoria>> DeletarCategoria(int cdCategoria, int cdUsuario)
@@ -47,7 +47,7 @@ public class CategoriaRepositorio
             await _context.SaveChangesAsync();
             return Ok(null, "Categoria deletada com sucesso");
         }
-        catch (Exception ex) { return Erro(ex.Message); }
+        catch { return Erro("Não foi possível concluir a operação."); }
     }
 
     private RespostaHttp<Categoria> Ok(Categoria? d, string msg) => new() { StatusCode = 200, Dados = d, Mensagem = new List<Mensagem> { new() { titulo = "Sucesso", descricao = msg, severity = TipoMensagem.Success } } };

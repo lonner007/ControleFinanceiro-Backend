@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using ControleFinanceiro_Backend.Data;
 using ControleFinanceiro_Backend.DTOs;
 using ControleFinanceiro_Backend.Models;
@@ -13,27 +14,34 @@ public class AuthRepositorio
     private readonly JwtServico _jwt;
     public AuthRepositorio(AppDbContext context, JwtServico jwt) { _context = context; _jwt = jwt; }
 
+    private const int MinPasswordLength = 10;
+    private static readonly Regex EmailRegex = new(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     public async Task<RespostaHttp<AuthResponseDto>> Registrar(RegistroDto dto)
     {
         try
         {
-            if (await _context.Usuarios.AnyAsync(u => u.dsEmail == dto.dsEmail.ToLower().Trim()))
+            var email = dto.dsEmail.Trim().ToLowerInvariant();
+            if (!EmailRegex.IsMatch(email))
+                return Erro("Dados inválidos.");
+
+            if (await _context.Usuarios.AnyAsync(u => u.dsEmail == email))
                 return Erro("Este e-mail já está cadastrado.");
 
-            if (dto.dsSenha.Length < 6)
-                return Erro("A senha deve ter pelo menos 6 caracteres.");
+            if (dto.dsSenha.Length < MinPasswordLength)
+                return Erro("Credenciais inválidas.");
 
             var usuario = new Usuario
             {
                 nmUsuario = dto.nmUsuario.Trim(),
-                dsEmail = dto.dsEmail.ToLower().Trim(),
-                dsSenhaHash = BCrypt.Net.BCrypt.HashPassword(dto.dsSenha),
+                dsEmail = email,
+                dsSenhaHash = BCrypt.Net.BCrypt.HashPassword(dto.dsSenha, workFactor: 12),
                 dtCriacao = DateTime.UtcNow,
                 ativo = true,
             };
 
             var refreshToken = _jwt.GerarRefreshToken();
-            usuario.dsRefreshToken = refreshToken;
+            usuario.dsRefreshToken = _jwt.HashRefreshToken(refreshToken);
             usuario.dtRefreshTokenExpira = DateTime.UtcNow.AddDays(7);
 
             _context.Usuarios.Add(usuario);
@@ -46,17 +54,21 @@ public class AuthRepositorio
                 Mensagem = new List<Mensagem> { new() { titulo = "Sucesso", descricao = "Conta criada com sucesso!", severity = TipoMensagem.Success } }
             };
         }
-        catch (Exception ex) { return Erro(ex.Message); }
+        catch { return Erro("Não foi possível concluir a operação."); }
     }
 
     public async Task<RespostaHttp<AuthResponseDto>> Login(LoginDto dto)
     {
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.dsEmail == dto.dsEmail.ToLower().Trim() && u.ativo);
+        var email = dto.dsEmail.Trim().ToLowerInvariant();
+        if (!EmailRegex.IsMatch(email))
+            return Erro("Credenciais inválidas.");
+
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.dsEmail == email && u.ativo);
         if (usuario == null || !BCrypt.Net.BCrypt.Verify(dto.dsSenha, usuario.dsSenhaHash))
-            return Erro("E-mail ou senha incorretos.");
+            return Erro("Credenciais inválidas.");
  
         var refreshToken = _jwt.GerarRefreshToken();
-        usuario.dsRefreshToken = refreshToken;
+        usuario.dsRefreshToken = _jwt.HashRefreshToken(refreshToken);
         usuario.dtRefreshTokenExpira = DateTime.UtcNow.AddDays(7);
         await _context.SaveChangesAsync();
 
@@ -76,11 +88,11 @@ public class AuthRepositorio
         var cdUsuario = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var usuario = await _context.Usuarios.FindAsync(cdUsuario);
 
-        if (usuario == null || usuario.dsRefreshToken != refreshToken || usuario.dtRefreshTokenExpira < DateTime.UtcNow)
+        if (usuario == null || usuario.dsRefreshToken != _jwt.HashRefreshToken(refreshToken) || usuario.dtRefreshTokenExpira < DateTime.UtcNow)
             return Erro("Refresh token inválido ou expirado.");
 
         var novoRefresh = _jwt.GerarRefreshToken();
-        usuario.dsRefreshToken = novoRefresh;
+        usuario.dsRefreshToken = _jwt.HashRefreshToken(novoRefresh);
         usuario.dtRefreshTokenExpira = DateTime.UtcNow.AddDays(7);
         await _context.SaveChangesAsync();
 

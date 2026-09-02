@@ -8,7 +8,7 @@ public class ContaRepositorio
     public ContaRepositorio(AppDbContext context) { _context = context; }
 
     public async Task<List<Conta>> ObterListaContas(int cdUsuario) =>
-        await _context.Contas.Where(c => c.cdUsuario == cdUsuario).ToListAsync();
+        await _context.Contas.AsNoTracking().Where(c => c.cdUsuario == cdUsuario).Take(500).ToListAsync();
 
     public async Task<RespostaHttp<Conta>> CriarConta(Conta conta, int cdUsuario)
     {
@@ -21,7 +21,7 @@ public class ContaRepositorio
             await _context.SaveChangesAsync();
             return Ok(conta, "Conta criada com sucesso");
         }
-        catch (Exception ex) { return Erro(ex.Message); }
+        catch { return Erro("Não foi possível concluir a operação."); }
     }
 
     public async Task<RespostaHttp<Conta>> AtualizarConta(int cdConta, Conta nova, int cdUsuario)
@@ -38,7 +38,7 @@ public class ContaRepositorio
             await _context.SaveChangesAsync();
             return Ok(conta, "Conta atualizada com sucesso");
         }
-        catch (Exception ex) { return Erro(ex.Message); }
+        catch { return Erro("Não foi possível concluir a operação."); }
     }
 
     public async Task<RespostaHttp<Conta>> DeletarConta(int cdConta, int cdUsuario)
@@ -51,7 +51,7 @@ public class ContaRepositorio
             await _context.SaveChangesAsync();
             return Ok(null, "Conta deletada com sucesso");
         }
-        catch (Exception ex) { return Erro(ex.Message); }
+        catch { return Erro("Não foi possível concluir a operação."); }
     }
 
     private RespostaHttp<Conta> Ok(Conta? d, string msg) => new() { StatusCode = 200, Dados = d, Mensagem = new List<Mensagem> { new() { titulo = "Sucesso", descricao = msg, severity = TipoMensagem.Success } } };

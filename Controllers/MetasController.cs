@@ -18,11 +18,11 @@ public class MetasController : ControllerBase
     }
 
     [HttpPost("CriarMeta")]
-    public async Task<IActionResult> Criar([FromBody] Meta meta)
+    public async Task<IActionResult> Criar([FromBody, Bind("nmMeta,dsMeta,vlAlvo,dtPrazo")] Meta meta)
     { var res = await _repo.CriarMeta(meta, User.GetUserId()); return StatusCode(res.StatusCode, res); }
 
     [HttpPut("{cdMeta}")]
-    public async Task<IActionResult> Atualizar(int cdMeta, [FromBody] Meta meta)
+    public async Task<IActionResult> Atualizar(int cdMeta, [FromBody, Bind("nmMeta,dsMeta,vlAlvo,vlAtual,dtPrazo,ativo")] Meta meta)
     { var res = await _repo.AtualizarMeta(cdMeta, meta, User.GetUserId()); return StatusCode(res.StatusCode, res); }
 
     [HttpDelete("deletar/{cdMeta}")]

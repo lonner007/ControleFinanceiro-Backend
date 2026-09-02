@@ -8,7 +8,7 @@ public class MetaRepositorio
     public MetaRepositorio(AppDbContext context) { _context = context; }
 
     public async Task<List<Meta>> ObterListaMetas(int cdUsuario) =>
-        await _context.Metas.Where(m => m.cdUsuario == cdUsuario).OrderBy(m => m.dtPrazo).ToListAsync();
+        await _context.Metas.AsNoTracking().Where(m => m.cdUsuario == cdUsuario).OrderBy(m => m.dtPrazo).Take(500).ToListAsync();
 
     public async Task<RespostaHttp<Meta>> CriarMeta(Meta meta, int cdUsuario)
     {
@@ -20,7 +20,7 @@ public class MetaRepositorio
             await _context.SaveChangesAsync();
             return Ok(meta, "Meta criada com sucesso");
         }
-        catch (Exception ex) { return Erro(ex.Message); }
+        catch { return Erro("Não foi possível concluir a operação."); }
     }
 
     public async Task<RespostaHttp<Meta>> AtualizarMeta(int cdMeta, Meta nova, int cdUsuario)
@@ -34,7 +34,7 @@ public class MetaRepositorio
             await _context.SaveChangesAsync();
             return Ok(meta, "Meta atualizada com sucesso");
         }
-        catch (Exception ex) { return Erro(ex.Message); }
+        catch { return Erro("Não foi possível concluir a operação."); }
     }
 
     public async Task<RespostaHttp<Meta>> DeletarMeta(int cdMeta, int cdUsuario)
@@ -47,7 +47,7 @@ public class MetaRepositorio
             await _context.SaveChangesAsync();
             return Ok(null, "Meta deletada com sucesso");
         }
-        catch (Exception ex) { return Erro(ex.Message); }
+        catch { return Erro("Não foi possível concluir a operação."); }
     }
 
     private RespostaHttp<Meta> Ok(Meta? d, string msg) => new() { StatusCode = 200, Dados = d, Mensagem = new List<Mensagem> { new() { titulo = "Sucesso", descricao = msg, severity = TipoMensagem.Success } } };
