@@ -21,7 +21,7 @@ public class LoginDto
     [Required, EmailAddress, StringLength(200)]
     public string dsEmail  { get; set; } = string.Empty;
     
-    [Required, StringLength(128, MinimumLength = 10)]
+    [Required, StringLength(128)]
     public string dsSenha  { get; set; } = string.Empty;
 }
 
